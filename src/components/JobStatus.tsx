@@ -9,6 +9,8 @@ type Props = {
   createdAt?: string;
   /** 0–100 from API; optional display */
   progress?: number;
+  /** Provider-agnostic failure reason */
+  errorMessage?: string;
 };
 
 type StepKey = "uploaded" | "analyzing" | "meshing" | "done";
@@ -73,7 +75,7 @@ const BADGE: Record<Status, { label: string; className: string }> = {
   },
 };
 
-export function JobStatus({ status, createdAt, progress }: Props) {
+export function JobStatus({ status, createdAt, progress, errorMessage }: Props) {
   const badge = BADGE[status] ?? BADGE.pending;
   const current = activeStepIndex(status, createdAt);
   const isFailed = status === "failed";
@@ -94,7 +96,8 @@ export function JobStatus({ status, createdAt, progress }: Props) {
         </p>
         {isFailed && (
           <p className="mt-2 text-sm">
-            3Dモデルの生成に失敗しました。もう一度お試しください。
+            {errorMessage ||
+              "3Dモデルの生成に失敗しました。もう一度お試しください。"}
           </p>
         )}
       </div>

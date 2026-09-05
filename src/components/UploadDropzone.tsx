@@ -78,13 +78,22 @@ export function UploadDropzone() {
     setSubmitting(true);
     setError(null);
     try {
+      const form = new FormData();
+      for (const item of items) {
+        form.append("images", item.file, item.file.name);
+      }
       const res = await fetch("/api/jobs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageCount: items.length }),
+        body: form,
       });
+      if (res.status === 401) {
+        throw new Error("ログインが必要です");
+      }
       if (!res.ok) {
-        throw new Error(`作成に失敗しました (${res.status})`);
+        const data = (await res.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        throw new Error(data?.message || `作成に失敗しました (${res.status})`);
       }
       const data = (await res.json()) as { id?: string };
       if (!data.id) {
@@ -129,9 +138,7 @@ export function UploadDropzone() {
             : "border-neutral-300 hover:border-neutral-400 dark:border-neutral-600 dark:hover:border-neutral-500",
         ].join(" ")}
       >
-        <p className="text-sm font-medium">
-          写真をドラッグ＆ドロップ
-        </p>
+        <p className="text-sm font-medium">写真をドラッグ＆ドロップ</p>
         <p className="mt-1 text-xs text-neutral-500">
           またはタップして選択（JPG / PNG / WebP）
         </p>

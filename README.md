@@ -1,39 +1,42 @@
 # photo-to-3d
 
-写真から3Dモデルを生成する Web アプリ（Week1 スキャフォールド）
-
-第1週: UIのみ / 第2週: 復元API
+Photo to 3D web app. Week2 vessel only: disk upload, SQLite, auth, dummy reconstruction.
+No paid reconstruction API calls. Display uses /samples/demo.glb.
+Tripo wiring comes later via src/lib/providers/tripo.ts.
 
 ## Stack
 
-- Next.js (App Router) + TypeScript + Tailwind CSS
-- pnpm
-- `@google/model-viewer` (+ peer `three`)
+- Next.js App Router, TypeScript, Tailwind
+- @libsql/client file SQLite under data/
+- @google/model-viewer
 
 ## Routes
 
-| Path | Description |
-|------|-------------|
-| `/` | ホーム |
-| `/jobs/new` | 新規ジョブ |
-| `/jobs/[id]` | ジョブ詳細（待機 → 実GLBプレビュー） |
-| `/api/jobs` | ジョブ API（スタブ） |
-| `/api/jobs/[id]` | ジョブ詳細 API（スタブ） |
+- / home
+- /login shared-secret login
+- /jobs history (auth required)
+- /jobs/new multipart upload
+- /jobs/[id] detail then dummy GLB
+- API under /api/jobs for list, create, detail, retry, images
 
-## Dev
+## Setup
 
-```bash
-pnpm install
-pnpm dev
-```
+Install deps, copy env example to local env, start the Next.js dev server.
 
-## Sample GLB
+### Login
 
-`public/samples/demo.glb` — Khronos glTF Sample Models — Box (Apache-2.0 / Cesium).
-Source tree: KhronosGroup/glTF-Sample-Models (2.0/Box).
-Week1 ready jobs point here until real reconstruction exists. See `public/samples/README.md`.
+Open /login and enter the shared secret from env (dev default documented in env example).
+Unauthenticated job pages redirect to login.
+
+### Providers
+
+Env RECONSTRUCTION_PROVIDER: dummy (default) or tripo (stub not configured).
+
+## Data
+
+Folder data/ holds uploads and SQLite; ignored by git; survives restart.
 
 ## Notes
 
-- 復元 API / DB / 認証は未実装（第2週以降）
-- Week1 Day5: `@google/model-viewer` で実GLB表示・ダウンロード・全画面
+Paid multi-image APIs are paused for cost. Next candidate is Tripo later.
+Done when production build passes and dummy end-to-end works.

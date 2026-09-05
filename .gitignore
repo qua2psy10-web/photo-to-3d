@@ -17,6 +17,7 @@
 
 # env files
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -27,3 +28,6 @@ next-env.d.ts
 
 # package managers
 .pnpm-debug.log*
+
+# local uploads + sqlite
+/data/

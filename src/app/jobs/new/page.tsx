@@ -8,13 +8,16 @@ export default function NewJobPage() {
         <h1 className="text-2xl font-bold">新規ジョブ</h1>
         <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
           被写体を囲むように複数枚の写真を選んでください。推奨は12枚以上です。
-          作成後はジョブ詳細へ進みます（復元処理は第2週以降）。
+          画像はサーバーの data/ に保存され、復元は現在ダミー（demo.glb）です。
         </p>
       </div>
       <UploadDropzone />
       <nav className="flex gap-4 text-sm">
-        <Link href="/" className="text-blue-600 underline">
+        <Link href="/" className="text-blue-600 underline dark:text-blue-400">
           ホーム
+        </Link>
+        <Link href="/jobs" className="text-blue-600 underline dark:text-blue-400">
+          履歴
         </Link>
       </nav>
     </main>

@@ -1,4 +1,11 @@
-# Week2 Day1 — 復元 API 選定（multi-photo → GLB）
+# Week2 — reconstruction API notes
+
+> **Update (vessel):** Paid Meshy usage is paused for cost. The app does not call paid APIs.
+> Current mode: **dummy vessel** (SQLite + disk images + /samples/demo.glb).
+> **Next candidate: Tripo pay-as-you-go** — wire later in src/lib/providers/tripo.ts.
+> Below is the Day1 comparison memo kept for reference.
+
+---
 
 調査日: 2026-09-05（Asia/Tokyo）  
 リポジトリ: [photo-to-3d](https://github.com/qua2psy10-web/photo-to-3d)  
