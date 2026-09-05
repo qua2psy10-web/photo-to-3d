@@ -12,7 +12,8 @@
     "@google/model-viewer": "^4.1.0",
     "next": "^15.5.2",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "three": "0.183.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",

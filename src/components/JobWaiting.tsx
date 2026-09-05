@@ -120,14 +120,12 @@ export function JobWaiting({ jobId, initialJob }: Props) {
       </dl>
 
       {isReady && (
-        <section className="space-y-2">
+        <section className="space-y-3">
           <h2 className="text-sm font-semibold">3Dプレビュー</h2>
-          <ModelViewer src={job.modelUrl} />
-          {job.modelUrl && (
-            <p className="text-xs text-neutral-500 break-all">
-              modelUrl: {job.modelUrl}
-            </p>
-          )}
+          <ModelViewer
+            src={job.modelUrl}
+            alt={`ジョブ ${job.id} の3Dモデル`}
+          />
         </section>
       )}
 
