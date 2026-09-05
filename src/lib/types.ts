@@ -1,4 +1,5 @@
 export type JobStatus =
+  | "queued"
   | "pending"
   | "uploading"
   | "processing"
