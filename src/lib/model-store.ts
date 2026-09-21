@@ -54,9 +54,5 @@ export function readLocalGlb(
   if (fs.existsSync(dest)) {
     return { buffer: fs.readFileSync(dest), exists: true };
   }
-  const fallback = demoGlbSourcePath();
-  if (fs.existsSync(fallback)) {
-    return { buffer: fs.readFileSync(fallback), exists: false };
-  }
   return { buffer: Buffer.alloc(0), exists: false };
 }

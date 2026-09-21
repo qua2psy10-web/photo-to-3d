@@ -13,8 +13,8 @@ const PNG = Buffer.from(
   "base64",
 );
 
-function fourPngs() {
-  return [0, 1, 2, 3].map((i) => ({
+function eightPngs() {
+  return [0, 1, 2, 3, 4, 5, 6, 7].map((i) => ({
     buffer: PNG,
     originalName: `shot-${i}.png`,
     mimeType: "image/png",
@@ -38,7 +38,7 @@ async function withTempData<T>(fn: () => Promise<T>): Promise<T> {
 test("createJob rejects three images", async () => {
   await withTempData(async () => {
     await assert.rejects(
-      () => createJob({ files: fourPngs().slice(0, 3) }),
+      () => createJob({ files: eightPngs().slice(0, 3) }),
       (err: unknown) =>
         err instanceof UserFacingError && err.code === ErrorCode.too_few_images,
     );
@@ -47,9 +47,9 @@ test("createJob rejects three images", async () => {
 
 test("createJob stores images and dummy ready copies a local GLB", async () => {
   await withTempData(async () => {
-    const job = await createJob({ files: fourPngs() });
+    const job = await createJob({ files: eightPngs() });
     assert.equal(job.status, "queued");
-    assert.equal(job.imageCount, 4);
+    assert.equal(job.imageCount, 8);
     assert.equal(job.provider, "dummy");
     for (const rel of job.imagePaths) {
       assert.equal(fs.existsSync(path.join(getDataDir(), rel)), true);
@@ -73,7 +73,7 @@ test("createJob stores images and dummy ready copies a local GLB", async () => {
 
 test("simulateFail becomes failed with Japanese message", async () => {
   await withTempData(async () => {
-    const job = await createJob({ files: fourPngs(), simulateFail: true });
+    const job = await createJob({ files: eightPngs(), simulateFail: true });
     const db = await ensureSchema();
     const past = new Date(Date.now() - 20_000).toISOString();
     await db.execute({

@@ -12,7 +12,7 @@ export default function HomePage() {
           GLB を回転プレビューできます。
         </p>
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
-          {MESSAGES.dummy_banner}
+          {MESSAGES.local_banner}
         </p>
       </div>
 
@@ -21,7 +21,7 @@ export default function HomePage() {
           {
             n: "1",
             title: "撮る",
-            body: `被写体を一周。最低 ${MIN_IMAGES} 枚、推奨 ${RECOMMENDED_IMAGES} 枚前後。`,
+            body: `被写体を一周。最低 ${MIN_IMAGES} 枚、推奨 ${RECOMMENDED_IMAGES} 枚前後。明るい場所で、隣の写真と半分ほど重ねる。`,
           },
           {
             n: "2",
@@ -31,7 +31,7 @@ export default function HomePage() {
           {
             n: "3",
             title: "待つ",
-            body: "約12秒でデモ GLB が開きます。履歴からいつでも再開できます。",
+            body: "Mac 上で数分かかることがあります。完了後に履歴から再開できます。",
           },
         ].map((step) => (
           <li

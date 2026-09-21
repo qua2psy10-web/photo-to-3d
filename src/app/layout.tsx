@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "photo-to-3d",
   description:
-    "複数角度の写真から 3D モデルを作る。現在の復元はシミュレーションです。",
+    "複数角度の写真から、この Mac 上のフォトグラメトリで 3D モデルを作ります。",
 };
 
 export default function RootLayout({

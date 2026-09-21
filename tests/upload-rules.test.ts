@@ -41,14 +41,12 @@ test("rejects more than MAX_IMAGES", () => {
 });
 
 test("rejects non-image names without an image mime", () => {
+  const files = Array.from({ length: MIN_IMAGES - 1 }, (_, i) =>
+    file(`a${i}.jpg`),
+  );
+  files.push(file("notes.txt", 10, "text/plain"));
   assert.throws(
-    () =>
-      validateUploadFiles([
-        file("a.jpg"),
-        file("b.jpg"),
-        file("c.jpg"),
-        file("notes.txt", 10, "text/plain"),
-      ]),
+    () => validateUploadFiles(files),
     (err: unknown) =>
       err instanceof UserFacingError && err.code === ErrorCode.invalid_image,
   );
@@ -60,14 +58,12 @@ test("upload body cap covers several camera stills beyond Next 10MB default", ()
 });
 
 test("rejects oversized files", () => {
+  const files = Array.from({ length: MIN_IMAGES - 1 }, (_, i) =>
+    file(`a${i}.jpg`),
+  );
+  files.push(file("huge.jpg", 20 * 1024 * 1024));
   assert.throws(
-    () =>
-      validateUploadFiles([
-        file("a.jpg"),
-        file("b.jpg"),
-        file("c.jpg"),
-        file("huge.jpg", 20 * 1024 * 1024),
-      ]),
+    () => validateUploadFiles(files),
     (err: unknown) =>
       err instanceof UserFacingError && err.code === ErrorCode.file_too_large,
   );
