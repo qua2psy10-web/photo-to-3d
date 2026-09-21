@@ -56,6 +56,18 @@ export const MESSAGES = {
     "3Dモデルの生成に失敗しました。同じ写真で再試行するか、新規にアップロードしてください。",
   dummy_banner:
     "現在の復元はシミュレーションです。出力はデモ用の立方体 GLB で、入力写真の形状は反映しません。",
+  local_banner:
+    "この Mac 上で Object Capture（フォトグラメトリ）を実行します。被写体を一周した 8 枚以上の写真が必要で、数分かかることがあります。",
+  local_cli_missing:
+    "Object Capture 用のコマンドをビルドできませんでした。Xcode コマンドラインツールが入っているか確認してください。",
+  local_too_few_views:
+    "使える写真が足りません。被写体を囲むように 8 枚以上を上げてください。",
+  local_capture_failed:
+    "3D 復元に失敗しました。明るい場所で、重なりのある写真を増やして再試行してください。",
+  local_convert_failed:
+    "メッシュはできましたが GLB への変換に失敗しました。もう一度お試しください。",
+  local_unsupported:
+    "この Mac では Object Capture を使えません（Apple Silicon または AMD GPU が必要です）。",
 } as const;
 
 export class UserFacingError extends Error {

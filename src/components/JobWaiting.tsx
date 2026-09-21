@@ -228,7 +228,9 @@ export function JobWaiting({ jobId, initialJob }: Props) {
 
       {!isReady && !isFailed && (
         <p className="text-center text-xs text-neutral-400">
-          処理状況を更新しています（約1.5秒ごと）…
+          {job.provider === "local"
+            ? "この Mac で復元中です。数分かかることがあります（約1.5秒ごとに更新）。"
+            : "処理状況を更新しています（約1.5秒ごと）…"}
         </p>
       )}
 

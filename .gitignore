@@ -31,3 +31,6 @@ next-env.d.ts
 
 # local uploads + sqlite
 /data/
+
+# Swift Object Capture build
+/tools/object-capture/.build/

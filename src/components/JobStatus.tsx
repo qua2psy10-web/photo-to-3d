@@ -1,7 +1,6 @@
 "use client";
 
 import type { JobStatus as Status } from "@/lib/types";
-import { FAKE_PROGRESS } from "@/lib/types";
 
 type Props = {
   status: Status;
@@ -22,16 +21,14 @@ const STEPS: { key: StepKey; label: string }[] = [
   { key: "done", label: "完了" },
 ];
 
-function activeStepIndex(status: Status, createdAt?: string): number {
+function activeStepIndex(status: Status, progress?: number): number {
   if (status === "ready" || status === "completed") return 3;
   if (status === "failed") return -1;
   if (status === "queued" || status === "pending" || status === "uploading") {
     return 0;
   }
-  // processing — split analyzing / meshing by elapsed
-  if (createdAt) {
-    const ms = Date.now() - new Date(createdAt).getTime();
-    if (ms < FAKE_PROGRESS.analyzingUntilMs) return 1;
+  if (typeof progress === "number") {
+    if (progress < 45) return 1;
     return 2;
   }
   return 1;
@@ -75,9 +72,9 @@ const BADGE: Record<Status, { label: string; className: string }> = {
   },
 };
 
-export function JobStatus({ status, createdAt, progress, errorMessage }: Props) {
+export function JobStatus({ status, progress, errorMessage }: Props) {
   const badge = BADGE[status] ?? BADGE.pending;
-  const current = activeStepIndex(status, createdAt);
+  const current = activeStepIndex(status, progress);
   const isFailed = status === "failed";
   const pct =
     typeof progress === "number"
