@@ -10,10 +10,11 @@ struct CLIError: Error, LocalizedError, CustomStringConvertible {
 }
 
 struct Args {
-    var inputDir: URL
+    var inputDir: URL?
     var usdzURL: URL
     var objURL: URL?
     var detail: PhotogrammetrySession.Request.Detail
+    var exportOnly: Bool
 }
 
 func parseArgs(_ argv: [String]) throws -> Args {
@@ -21,6 +22,7 @@ func parseArgs(_ argv: [String]) throws -> Args {
     var output: String?
     var obj: String?
     var detailRaw = "medium"
+    var exportOnly = false
 
     var i = 1
     while i < argv.count {
@@ -35,12 +37,17 @@ func parseArgs(_ argv: [String]) throws -> Args {
             obj = next; i += 2
         case "--detail":
             detailRaw = next ?? "medium"; i += 2
+        case "--export-only":
+            exportOnly = true; i += 1
         default:
             throw CLIError("Unknown argument: \(a)")
         }
     }
 
-    guard let input, let output else {
+    guard let output else {
+        throw CLIError("Usage: object-capture --input DIR --output model.usdz [--obj model.obj] [--detail preview|reduced|medium|full|raw] | --export-only --output model.usdz --obj model.obj")
+    }
+    if !exportOnly && input == nil {
         throw CLIError("Usage: object-capture --input DIR --output model.usdz [--obj model.obj] [--detail preview|reduced|medium|full|raw]")
     }
 
@@ -56,10 +63,11 @@ func parseArgs(_ argv: [String]) throws -> Args {
     }
 
     return Args(
-        inputDir: URL(fileURLWithPath: input, isDirectory: true),
+        inputDir: input.map { URL(fileURLWithPath: $0, isDirectory: true) },
         usdzURL: URL(fileURLWithPath: output),
         objURL: obj.map { URL(fileURLWithPath: $0) },
-        detail: detail
+        detail: detail,
+        exportOnly: exportOnly
     )
 }
 
@@ -99,6 +107,19 @@ struct ObjectCaptureCLI {
     static func run() async throws {
         let args = try parseArgs(CommandLine.arguments)
 
+        if args.exportOnly {
+            guard FileManager.default.fileExists(atPath: args.usdzURL.path) else {
+                throw CLIError("USDZ not found: \(args.usdzURL.path)")
+            }
+            guard let objURL = args.objURL else {
+                throw CLIError("--obj is required with --export-only")
+            }
+            try exportObj(from: args.usdzURL, to: objURL)
+            emit(["event": "obj", "path": objURL.path])
+            emit(["event": "done", "usdz": args.usdzURL.path])
+            return
+        }
+
         guard PhotogrammetrySession.isSupported else {
             throw CLIError("Object Capture is not supported on this Mac (needs Apple Silicon or AMD GPU).")
         }
@@ -106,9 +127,12 @@ struct ObjectCaptureCLI {
             throw CLIError("No Metal GPU device available.")
         }
 
+        guard let inputDir = args.inputDir else {
+            throw CLIError("--input is required")
+        }
         var isDir: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: args.inputDir.path, isDirectory: &isDir), isDir.boolValue else {
-            throw CLIError("Input folder not found: \(args.inputDir.path)")
+        guard FileManager.default.fileExists(atPath: inputDir.path, isDirectory: &isDir), isDir.boolValue else {
+            throw CLIError("Input folder not found: \(inputDir.path)")
         }
 
         try FileManager.default.createDirectory(
@@ -121,7 +145,7 @@ struct ObjectCaptureCLI {
         config.featureSensitivity = .normal
 
         let session = try PhotogrammetrySession(
-            input: args.inputDir,
+            input: inputDir,
             configuration: config
         )
         let request = PhotogrammetrySession.Request.modelFile(
@@ -129,10 +153,11 @@ struct ObjectCaptureCLI {
             detail: args.detail
         )
 
-        emit(["event": "start", "input": args.inputDir.path])
+        emit(["event": "start", "input": inputDir.path])
         try session.process(requests: [request])
 
-        for try await output in session.outputs {
+        var modelReady = false
+        sessionLoop: for try await output in session.outputs {
             switch output {
             case .inputComplete:
                 emit(["event": "inputComplete"])
@@ -144,10 +169,13 @@ struct ObjectCaptureCLI {
                 } else {
                     emit(["event": "requestComplete"])
                 }
+                modelReady = FileManager.default.fileExists(atPath: args.usdzURL.path)
+                if modelReady { break sessionLoop }
             case .requestError(_, let error):
                 throw CLIError(error.localizedDescription)
             case .processingComplete:
                 emit(["event": "processingComplete"])
+                break sessionLoop
             case .processingCancelled:
                 throw CLIError("Photogrammetry was cancelled.")
             case .invalidSample(let id, let reason):
@@ -160,6 +188,9 @@ struct ObjectCaptureCLI {
                 emit(["event": "progressInfo", "info": String(describing: info)])
             case .stitchingIncomplete:
                 emit(["event": "stitchingIncomplete"])
+                if FileManager.default.fileExists(atPath: args.usdzURL.path) {
+                    break sessionLoop
+                }
             @unknown default:
                 emit(["event": "unknown"])
             }
