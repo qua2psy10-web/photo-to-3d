@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   MAX_FILE_BYTES,
   MAX_IMAGES,
+  MAX_UPLOAD_BYTES,
   MIN_IMAGES,
   RECOMMENDED_IMAGES,
   WARN_BELOW,
@@ -96,6 +97,11 @@ export function UploadDropzone() {
 
   async function handleCreate() {
     if (!canCreate || submitting) return;
+    const total = items.reduce((sum, item) => sum + item.file.size, 0);
+    if (total > MAX_UPLOAD_BYTES) {
+      setError(MESSAGES.payload_too_large);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {

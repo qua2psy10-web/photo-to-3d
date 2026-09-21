@@ -27,7 +27,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const form = await request.formData();
+    let form: FormData;
+    try {
+      form = await request.formData();
+    } catch {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: ErrorCode.payload_too_large,
+          message: MESSAGES.payload_too_large,
+        },
+        { status: 413 },
+      );
+    }
     const entries = form.getAll("images");
     const files: {
       buffer: Buffer;

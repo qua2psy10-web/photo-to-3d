@@ -13,6 +13,7 @@ export const ErrorCode = {
   too_many_images: "too_many_images",
   invalid_image: "invalid_image",
   file_too_large: "file_too_large",
+  payload_too_large: "payload_too_large",
   unauthorized: "unauthorized",
   not_found: "not_found",
   retry_failed: "retry_failed",
@@ -38,6 +39,8 @@ export const MESSAGES = {
     `対応していないファイルです: ${name}。JPG / PNG / WebP を選んでください。`,
   file_too_large: (name: string) =>
     `${name} が大きすぎます。1枚あたり ${Math.round(MAX_FILE_BYTES / (1024 * 1024))} MB までです。`,
+  payload_too_large:
+    "写真の合計サイズが大きすぎて受け取れませんでした。枚数を減らすか、小さい画像にしてください。",
   unauthorized: "ログインが必要です。",
   not_found: "ジョブが見つかりません。削除されたか、権限がありません。",
   retry_failed: "再試行に失敗しました。",

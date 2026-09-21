@@ -4,6 +4,9 @@ export const WARN_BELOW = 8;
 export const RECOMMENDED_IMAGES = 12;
 export const MAX_IMAGES = 40;
 export const MAX_FILE_BYTES = 15 * 1024 * 1024;
+/** Multipart total: per-file cap × max count, plus form overhead. */
+export const MAX_UPLOAD_BYTES =
+  MAX_IMAGES * MAX_FILE_BYTES + 16 * 1024 * 1024;
 
 export const ACCEPTED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"] as const;
 

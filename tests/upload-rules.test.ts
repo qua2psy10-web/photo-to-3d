@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { MAX_IMAGES, MIN_IMAGES } from "../src/lib/limits";
+import {
+  MAX_FILE_BYTES,
+  MAX_IMAGES,
+  MAX_UPLOAD_BYTES,
+  MIN_IMAGES,
+} from "../src/lib/limits";
 import { ErrorCode, UserFacingError } from "../src/lib/messages";
 import { validateUploadFiles } from "../src/lib/upload-rules";
 
@@ -47,6 +52,11 @@ test("rejects non-image names without an image mime", () => {
     (err: unknown) =>
       err instanceof UserFacingError && err.code === ErrorCode.invalid_image,
   );
+});
+
+test("upload body cap covers several camera stills beyond Next 10MB default", () => {
+  assert.ok(MAX_UPLOAD_BYTES > 10 * 1024 * 1024);
+  assert.ok(MAX_UPLOAD_BYTES >= MAX_IMAGES * MAX_FILE_BYTES);
 });
 
 test("rejects oversized files", () => {
