@@ -24,7 +24,11 @@ export async function POST(request: Request) {
 
   if (!verifyPassword(password)) {
     return NextResponse.json(
-      { ok: false, error: "invalid_password" },
+      {
+        ok: false,
+        error: "invalid_password",
+        message: "パスワードが違います。",
+      },
       { status: 401 },
     );
   }

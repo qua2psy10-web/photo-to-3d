@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { AppHeader } from "@/components/AppHeader";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "photo-to-3d",
-  description: "Photo to 3D — Week2 vessel (dummy reconstruction)",
+  description:
+    "複数角度の写真から 3D モデルを作る。現在の復元はシミュレーションです。",
 };
 
 export default function RootLayout({
@@ -13,7 +15,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className="antialiased min-h-screen">{children}</body>
+      <body className="antialiased min-h-screen">
+        <AppHeader />
+        {children}
+      </body>
     </html>
   );
 }

@@ -25,20 +25,11 @@ export default async function JobDetailPage({ params }: PageProps) {
       <JobWaiting jobId={id} initialJob={job} />
 
       <nav className="flex flex-wrap gap-4 text-sm">
-        <Link href="/" className="text-blue-600 underline dark:text-blue-400">
-          ホーム
-        </Link>
-        <Link
-          href="/jobs"
-          className="text-blue-600 underline dark:text-blue-400"
-        >
-          履歴
-        </Link>
         <Link
           href="/jobs/new"
           className="text-blue-600 underline dark:text-blue-400"
         >
-          新規ジョブ
+          別のジョブを作る
         </Link>
       </nav>
     </main>

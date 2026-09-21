@@ -52,7 +52,11 @@ export async function middleware(req: NextRequest) {
 
   if (pathname.startsWith("/api/")) {
     return NextResponse.json(
-      { ok: false, error: "unauthorized" },
+      {
+        ok: false,
+        error: "unauthorized",
+        message: "ログインが必要です。",
+      },
       { status: 401 },
     );
   }

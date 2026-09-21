@@ -13,6 +13,11 @@ export function getReconstructionProvider(): ReconstructionProvider {
       return dummyProvider;
     case "tripo":
       return tripoProvider;
+    case "meshy":
+      console.warn(
+        `[providers] RECONSTRUCTION_PROVIDER=meshy is paused; using dummy`,
+      );
+      return dummyProvider;
     default:
       console.warn(
         `[providers] Unknown RECONSTRUCTION_PROVIDER="${name}", falling back to dummy`,

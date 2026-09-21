@@ -29,7 +29,7 @@ export type GetTaskResult = {
 
 /**
  * Reconstruction provider plug-in.
- * Week2 vessel: `dummy` works locally; `tripo` is a stub for later.
+ * Product slice: `dummy` is the live provider. `tripo` stays an unconfigured stub.
  */
 export interface ReconstructionProvider {
   readonly name: string;

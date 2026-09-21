@@ -2,23 +2,34 @@ import { createClient, type Client } from "@libsql/client";
 import fs from "fs";
 import path from "path";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DB_PATH = path.join(DATA_DIR, "photo-to-3d.db");
-
 let client: Client | null = null;
 let migrated = false;
+let boundDir: string | null = null;
 
 export function getDataDir(): string {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.mkdirSync(path.join(DATA_DIR, "uploads"), { recursive: true });
-  return DATA_DIR;
+  const dir = process.env.PHOTO_TO_3D_DATA_DIR
+    ? path.resolve(process.env.PHOTO_TO_3D_DATA_DIR)
+    : path.join(process.cwd(), "data");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.mkdirSync(path.join(dir, "uploads"), { recursive: true });
+  fs.mkdirSync(path.join(dir, "models"), { recursive: true });
+  return dir;
+}
+
+export function resetDbForTests(): void {
+  client = null;
+  migrated = false;
+  boundDir = null;
 }
 
 export function getDb(): Client {
-  if (!client) {
-    getDataDir();
+  const dir = getDataDir();
+  if (!client || boundDir !== dir) {
+    boundDir = dir;
+    migrated = false;
+    const dbPath = path.join(dir, "photo-to-3d.db");
     client = createClient({
-      url: `file:${DB_PATH}`,
+      url: `file:${dbPath}`,
     });
   }
   return client;

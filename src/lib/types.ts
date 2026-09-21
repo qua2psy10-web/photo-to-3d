@@ -28,7 +28,7 @@ export type Job = {
   modelUrl?: string;
   /** Provider-agnostic failure message for UI. */
   errorMessage?: string;
-  /** Soft-fail flag for dummy provider (~5% on create). */
+  /** Soft-fail flag for dummy provider (opt-in / DUMMY_SIMULATE_FAIL_RATE). */
   simulateFail?: boolean;
   /** External provider task id when wired (Tripo etc.). */
   providerTaskId?: string;
