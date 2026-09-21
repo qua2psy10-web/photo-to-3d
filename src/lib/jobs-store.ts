@@ -2,9 +2,12 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 import { ensureSchema, getDataDir } from "@/lib/db";
+import { ErrorCode, MESSAGES, UserFacingError } from "@/lib/messages";
+import { ensureLocalGlb } from "@/lib/model-store";
 import { getReconstructionProvider } from "@/lib/providers";
 import type { Job, JobImage, JobStatus } from "@/lib/types";
 import { DEMO_MODEL_URL } from "@/lib/types";
+import { validateUploadFiles } from "@/lib/upload-rules";
 
 type JobRow = {
   id: string;
@@ -103,10 +106,14 @@ export async function advanceJob(job: Job): Promise<Job> {
 
   let next: Job = job;
   if (result.status === "ready") {
+    const modelUrl = ensureLocalGlb(
+      job.id,
+      result.modelUrl ?? job.modelUrl ?? DEMO_MODEL_URL,
+    );
     next = {
       ...job,
       status: "ready",
-      modelUrl: result.modelUrl ?? DEMO_MODEL_URL,
+      modelUrl,
       errorMessage: undefined,
       providerTaskId: result.providerTaskId ?? job.providerTaskId,
     };
@@ -149,7 +156,17 @@ export async function getJob(id: string): Promise<Job | undefined> {
   if (!row) return undefined;
   const images = await loadImages(id);
   const job = rowToJob(row, images);
-  return advanceJob(job);
+  return materializeIfReady(await advanceJob(job));
+}
+
+/** Copy demo GLB locally for jobs that became ready before this path existed. */
+async function materializeIfReady(job: Job): Promise<Job> {
+  if (job.status !== "ready" && job.status !== "completed") return job;
+  const modelUrl = ensureLocalGlb(job.id, job.modelUrl ?? DEMO_MODEL_URL);
+  if (modelUrl === job.modelUrl) return job;
+  const next = { ...job, modelUrl };
+  await persistJobUpdate(next);
+  return { ...next, updatedAt: new Date().toISOString() };
 }
 
 export async function listJobs(): Promise<Job[]> {
@@ -161,7 +178,7 @@ export async function listJobs(): Promise<Job[]> {
   for (const row of res.rows as unknown as JobRow[]) {
     const images = await loadImages(row.id);
     const job = rowToJob(row, images);
-    jobs.push(await advanceJob(job));
+    jobs.push(await materializeIfReady(await advanceJob(job)));
   }
   return jobs;
 }
@@ -195,14 +212,30 @@ function mimeFromExt(name: string): string {
   return "image/jpeg";
 }
 
+function dummyFailRate(): number {
+  const raw = process.env.DUMMY_SIMULATE_FAIL_RATE;
+  if (raw === undefined || raw === "") return 0;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.min(1, n);
+}
+
 export async function createJob(input: CreateJobInput): Promise<Job> {
+  validateUploadFiles(
+    input.files.map((f) => ({
+      originalName: f.originalName,
+      mimeType: f.mimeType,
+      size: f.buffer.length,
+    })),
+  );
+
   const db = await ensureSchema();
   const id = randomUUID();
   const createdAt = new Date().toISOString();
   const provider = getReconstructionProvider();
   const simulateFail =
     input.simulateFail ??
-    (provider.name === "dummy" && Math.random() < 0.05);
+    (provider.name === "dummy" && Math.random() < dummyFailRate());
 
   const uploadDir = path.join(getDataDir(), "uploads", id);
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -257,7 +290,7 @@ export async function createJob(input: CreateJobInput): Promise<Job> {
     providerTaskId = created.providerTaskId;
   } catch (err) {
     const message =
-      err instanceof Error ? err.message : "Provider failed to create task";
+      err instanceof Error ? err.message : MESSAGES.provider_not_configured;
     await db.execute({
       sql: `INSERT INTO jobs (id, status, created_at, updated_at, image_count, model_url, error_message, simulate_fail, provider, provider_task_id)
             VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL)`,
@@ -330,7 +363,10 @@ export async function retryJob(sourceJobId: string): Promise<Job | null> {
     files.push({ buffer, originalName, mimeType });
   }
   if (files.length === 0) {
-    throw new Error("No stored images available to retry");
+    throw new UserFacingError(
+      ErrorCode.retry_no_images,
+      MESSAGES.retry_no_images,
+    );
   }
   return createJob({ files, simulateFail: false });
 }

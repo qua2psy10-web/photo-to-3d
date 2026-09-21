@@ -2,6 +2,15 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  MAX_FILE_BYTES,
+  MAX_IMAGES,
+  MIN_IMAGES,
+  RECOMMENDED_IMAGES,
+  WARN_BELOW,
+  isAcceptedImageName,
+} from "@/lib/limits";
+import { MESSAGES } from "@/lib/messages";
 
 type PreviewItem = {
   id: string;
@@ -10,19 +19,12 @@ type PreviewItem = {
 };
 
 const ACCEPT = "image/jpeg,image/png,image/webp,image/*";
-const MIN_CREATE = 4;
-const WARN_BELOW = 8;
-const RECOMMENDED = 12;
+const MIN_CREATE = MIN_IMAGES;
+const RECOMMENDED = RECOMMENDED_IMAGES;
 
 function isAcceptedImage(file: File): boolean {
   if (file.type.startsWith("image/")) return true;
-  const lower = file.name.toLowerCase();
-  return (
-    lower.endsWith(".jpg") ||
-    lower.endsWith(".jpeg") ||
-    lower.endsWith(".png") ||
-    lower.endsWith(".webp")
-  );
+  return isAcceptedImageName(file.name);
 }
 
 export function UploadDropzone() {
@@ -34,12 +36,21 @@ export function UploadDropzone() {
   const [error, setError] = useState<string | null>(null);
 
   const addFiles = useCallback((fileList: FileList | File[]) => {
-    const files = Array.from(fileList).filter(isAcceptedImage);
-    if (files.length === 0) return;
+    const incoming = Array.from(fileList);
+    const accepted = incoming.filter(isAcceptedImage);
+    if (accepted.length === 0) {
+      setError("JPG / PNG / WebP の画像を選んでください。");
+      return;
+    }
 
     setItems((prev) => {
+      const room = Math.max(0, MAX_IMAGES - prev.length);
+      const take = accepted.slice(0, room);
       const next = [...prev];
-      for (const file of files) {
+      for (const file of take) {
+        if (file.size > MAX_FILE_BYTES) {
+          continue;
+        }
         next.push({
           id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
           file,
@@ -48,6 +59,16 @@ export function UploadDropzone() {
       }
       return next;
     });
+
+    const oversized = accepted.filter((f) => f.size > MAX_FILE_BYTES);
+    if (oversized.length > 0) {
+      setError(MESSAGES.file_too_large(oversized[0].name));
+      return;
+    }
+    if (accepted.length > MAX_IMAGES) {
+      setError(MESSAGES.too_many_images(accepted.length));
+      return;
+    }
     setError(null);
   }, []);
 
@@ -87,13 +108,15 @@ export function UploadDropzone() {
         body: form,
       });
       if (res.status === 401) {
-        throw new Error("ログインが必要です");
+        throw new Error(MESSAGES.unauthorized);
       }
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as {
           message?: string;
         } | null;
-        throw new Error(data?.message || `作成に失敗しました (${res.status})`);
+        throw new Error(
+          data?.message || `作成に失敗しました (${res.status})`,
+        );
       }
       const data = (await res.json()) as { id?: string };
       if (!data.id) {
@@ -143,7 +166,7 @@ export function UploadDropzone() {
           またはタップして選択（JPG / PNG / WebP）
         </p>
         <p className="mt-3 text-xs text-neutral-400">
-          推奨 {RECOMMENDED} 枚以上 · 最低 {MIN_CREATE} 枚
+          推奨 {RECOMMENDED} 枚 · 最低 {MIN_CREATE} 枚 · 最大 {MAX_IMAGES} 枚
         </p>
         <input
           ref={inputRef}

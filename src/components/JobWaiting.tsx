@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { JobStatus } from "@/components/JobStatus";
 import { ModelViewer } from "@/components/ModelViewer";
+import { MESSAGES } from "@/lib/messages";
 import type { Job, JobStatus as Status } from "@/lib/types";
 
 type JobPayload = Job & {
@@ -33,13 +34,13 @@ export function JobWaiting({ jobId, initialJob }: Props) {
     try {
       const res = await fetch(`/api/jobs/${jobId}`, { cache: "no-store" });
       if (res.status === 401) {
-        setError("ログインが必要です");
+        setError(MESSAGES.unauthorized);
         setLoading(false);
         return null;
       }
       if (res.status === 404) {
         setJob(null);
-        setError("ジョブが見つかりません");
+        setError(MESSAGES.not_found);
         setLoading(false);
         return null;
       }
@@ -116,7 +117,7 @@ export function JobWaiting({ jobId, initialJob }: Props) {
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
           <p className="font-medium">ジョブが見つかりません</p>
           <p className="mt-1 text-xs opacity-80">
-            {error ?? "削除されたか、権限がありません。"}
+            {error ?? MESSAGES.not_found}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -140,9 +141,8 @@ export function JobWaiting({ jobId, initialJob }: Props) {
   const status = job.status;
   const isReady = status === "ready" || status === "completed";
   const isFailed = status === "failed";
-  const failureReason =
-    job.errorMessage ||
-    "3Dモデルの生成に失敗しました。同じ写真で再試行するか、新規にアップロードしてください。";
+  const failureReason = job.errorMessage || MESSAGES.dummy_generic_fail;
+  const isDummy = !job.provider || job.provider === "dummy";
 
   return (
     <div className="space-y-6">
@@ -183,9 +183,9 @@ export function JobWaiting({ jobId, initialJob }: Props) {
       {isReady && (
         <section className="space-y-3">
           <h2 className="text-sm font-semibold">3Dプレビュー</h2>
-          <p className="text-xs text-neutral-500">
-            現在はダミー GLB（/samples/demo.glb）を表示しています。有料復元 API は未接続です。
-          </p>
+          {isDummy && (
+            <p className="text-xs text-neutral-500">{MESSAGES.dummy_banner}</p>
+          )}
           <ModelViewer
             src={job.modelUrl}
             alt={`ジョブ ${job.id} の3Dモデル`}

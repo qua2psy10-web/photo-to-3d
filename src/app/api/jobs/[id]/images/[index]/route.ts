@@ -29,7 +29,7 @@ export async function GET(_request: Request, context: RouteContext) {
   try {
     const abs = absoluteImagePath(image.path);
     const buf = fs.readFileSync(abs);
-    return new NextResponse(buf, {
+    return new NextResponse(new Uint8Array(buf), {
       status: 200,
       headers: {
         "Content-Type": image.mimeType || "application/octet-stream",

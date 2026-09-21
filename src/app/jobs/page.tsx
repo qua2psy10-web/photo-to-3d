@@ -105,17 +105,7 @@ export default async function JobsHistoryPage() {
         </ul>
       )}
 
-      <nav className="flex flex-wrap gap-4 text-sm">
-        <Link href="/" className="text-blue-600 underline dark:text-blue-400">
-          ホーム
-        </Link>
-        <Link
-          href="/jobs/new"
-          className="text-blue-600 underline dark:text-blue-400"
-        >
-          新規ジョブ
-        </Link>
-      </nav>
+
     </main>
   );
 }

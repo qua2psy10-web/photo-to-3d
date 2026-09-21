@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createJob, listJobs } from "@/lib/jobs-store";
+import { ErrorCode, MESSAGES, UserFacingError } from "@/lib/messages";
 import { toPublicJob } from "@/lib/public-job";
 
 export const runtime = "nodejs";
@@ -19,8 +20,8 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           ok: false,
-          error: "expected_multipart",
-          message: "Send multipart/form-data with image files under field 'images'",
+          error: ErrorCode.expected_multipart,
+          message: MESSAGES.expected_multipart,
         },
         { status: 400 },
       );
@@ -47,7 +48,11 @@ export async function POST(request: Request) {
 
     if (files.length < 1) {
       return NextResponse.json(
-        { ok: false, error: "no_images", message: "At least one image is required" },
+        {
+          ok: false,
+          error: ErrorCode.no_images,
+          message: MESSAGES.no_images,
+        },
         { status: 400 },
       );
     }
@@ -58,12 +63,19 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (err) {
+    if (err instanceof UserFacingError) {
+      return NextResponse.json(
+        { ok: false, error: err.code, message: err.message },
+        { status: err.status },
+      );
+    }
     console.error("[POST /api/jobs]", err);
     return NextResponse.json(
       {
         ok: false,
-        error: "create_failed",
-        message: err instanceof Error ? err.message : "create failed",
+        error: ErrorCode.create_failed,
+        message:
+          err instanceof Error ? err.message : MESSAGES.create_failed,
       },
       { status: 500 },
     );
