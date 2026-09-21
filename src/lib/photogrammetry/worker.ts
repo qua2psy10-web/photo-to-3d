@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { execFileSync, spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { getDataDir } from "@/lib/db";
@@ -190,6 +190,36 @@ export async function runObjectCapture(opts: {
   });
 }
 
+export function rewriteMtlTextureRefs(mtl: string): string {
+  return mtl.replace(/\S+\.usdz\[([^\]]+)\]/g, (_m, inner: string) =>
+    path.basename(String(inner).replace(/\\/g, "/")),
+  );
+}
+
+function copyPngsRecursive(dir: string, dest: string): void {
+  if (!fs.existsSync(dir)) return;
+  for (const name of fs.readdirSync(dir)) {
+    const p = path.join(dir, name);
+    const st = fs.statSync(p);
+    if (st.isDirectory()) copyPngsRecursive(p, dest);
+    else if (name.toLowerCase().endsWith(".png")) {
+      fs.copyFileSync(p, path.join(dest, name));
+    }
+  }
+}
+
+/** ModelIO writes map_Kd as `model.usdz[0/tex.png]`. Unpack USDZ so obj2gltf can find PNGs. */
+export function prepareObjTextures(usdzPath: string, objDir: string): void {
+  const unpack = path.join(objDir, "_usdz");
+  fs.mkdirSync(unpack, { recursive: true });
+  execFileSync("unzip", ["-o", usdzPath, "-d", unpack], { stdio: "pipe" });
+  copyPngsRecursive(unpack, objDir);
+  const mtlPath = path.join(objDir, "model.mtl");
+  if (!fs.existsSync(mtlPath)) return;
+  const rewritten = rewriteMtlTextureRefs(fs.readFileSync(mtlPath, "utf8"));
+  fs.writeFileSync(mtlPath, rewritten);
+}
+
 export async function objToGlb(objPath: string, glbPath: string): Promise<void> {
   const obj2gltf = path.join(
     process.cwd(),
@@ -233,6 +263,7 @@ export async function reconstructJob(jobId: string, imagePaths: string[]): Promi
   if (!fs.existsSync(objPath)) {
     throw new Error(MESSAGES.local_convert_failed);
   }
+  prepareObjTextures(usdzPath, path.dirname(objPath));
   const glb = localGlbPath(jobId);
   await objToGlb(objPath, glb);
   if (!fs.existsSync(glb) || fs.statSync(glb).size < 100) {

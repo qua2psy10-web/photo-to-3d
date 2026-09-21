@@ -6,6 +6,7 @@ import { test } from "node:test";
 import { resetDbForTests } from "../src/lib/db";
 import { localGlbPath } from "../src/lib/model-store";
 import { writeProgress } from "../src/lib/photogrammetry/progress";
+import { rewriteMtlTextureRefs } from "../src/lib/photogrammetry/worker";
 import { localProvider } from "../src/lib/providers/local";
 import type { Job } from "../src/lib/types";
 
@@ -65,6 +66,11 @@ test("local getTask is ready only when GLB exists", async () => {
     assert.equal(ready.status, "ready");
     assert.equal(ready.modelUrl, "/api/jobs/local-job-1/model");
   });
+});
+
+test("rewriteMtlTextureRefs unwraps ModelIO usdz texture paths", () => {
+  const mtl = "map_Kd model.usdz[0/baked_mesh_tex0.png]\n";
+  assert.equal(rewriteMtlTextureRefs(mtl).trim(), "map_Kd baked_mesh_tex0.png");
 });
 
 test("local getTask failed copies Japanese error", async () => {
