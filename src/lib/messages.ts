@@ -68,6 +68,21 @@ export const MESSAGES = {
     "メッシュはできましたが GLB への変換に失敗しました。もう一度お試しください。",
   local_unsupported:
     "この Mac では Object Capture を使えません（Apple Silicon または AMD GPU が必要です）。",
+  fail_overlap:
+    "写真の重なりが足りず、位置を合わせられませんでした。被写体を少しずつ回し、隣の写真と半分ほど重ねて撮り直してください。",
+  fail_featureless:
+    "模様や角が少なく、対応点を見つけられませんでした。白や単色の面は避け、文字・傷・柄が見える向きを増やしてください。",
+  fail_blur:
+    "ピンぼけや手ぶれの写真が多く、使えませんでした。被写体にピントを合わせ、少し止まって撮ってください。",
+  fail_light:
+    "明るさが足りないか、白飛びしています。日陰の直射を避け、全体が明るく写る場所で撮り直してください。",
+  fail_format:
+    "読めない画像がありました。JPG / PNG / HEIC で、1枚 15MB 以下にしてください。",
+  fail_storage:
+    "ディスクの空きが足りません。data/ や不要なジョブを減らしてから再試行してください。",
+  fail_cancelled: "復元が中断されました。同じ写真で再試行できます。",
+  fail_no_model:
+    "メッシュを作れませんでした。枚数を増やし、被写体を画面いっぱいに、角度を変えて撮り直してください。",
 } as const;
 
 export class UserFacingError extends Error {
