@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { JobStatus } from "@/components/JobStatus";
+import { ShootingTips } from "@/components/ShootingTips";
 import { ModelViewer } from "@/components/ModelViewer";
 import { MESSAGES } from "@/lib/messages";
 import type { Job, JobStatus as Status } from "@/lib/types";
@@ -198,9 +199,10 @@ export function JobWaiting({ jobId, initialJob }: Props) {
           <p className="text-sm font-medium text-red-800 dark:text-red-200">
             生成に失敗しました
           </p>
-          <p className="text-sm text-red-800/90 dark:text-red-200/90">
+          <p className="whitespace-pre-wrap text-sm text-red-800/90 dark:text-red-200/90">
             {failureReason}
           </p>
+          <ShootingTips title="撮り直すとき" />
           <div className="flex flex-wrap gap-2">
             <button
               type="button"

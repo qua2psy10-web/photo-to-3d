@@ -2,6 +2,7 @@ import { execFileSync, spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { getDataDir } from "@/lib/db";
+import { explainCaptureFailure } from "@/lib/photogrammetry/explain";
 import { MESSAGES } from "@/lib/messages";
 import { localGlbPath } from "@/lib/model-store";
 import { jobWorkDir, writeProgress } from "@/lib/photogrammetry/progress";
@@ -126,6 +127,32 @@ export async function stageImages(
   return staging;
 }
 
+function noteCaptureEvent(
+  line: string,
+  stats: { invalid: number; skipped: number },
+  notes: string[],
+): void {
+  try {
+    const ev = JSON.parse(line) as {
+      event?: string;
+      reason?: string;
+      message?: string;
+    };
+    if (ev.event === "invalidSample") {
+      stats.invalid += 1;
+      if (ev.reason) notes.push(String(ev.reason));
+    } else if (ev.event === "skippedSample") {
+      stats.skipped += 1;
+    } else if (ev.event === "stitchingIncomplete") {
+      notes.push("stitching incomplete overlap");
+    } else if (ev.event === "error" && ev.message) {
+      notes.push(String(ev.message));
+    }
+  } catch {
+    /* not JSON */
+  }
+}
+
 function parseProgressLine(line: string): number | null {
   try {
     const ev = JSON.parse(line) as { event?: string; fraction?: number };
@@ -146,6 +173,8 @@ export async function runObjectCapture(opts: {
 }): Promise<void> {
   const bin = await ensureCliBuilt();
   const detail = process.env.PHOTOGRAMMETRY_DETAIL || "medium";
+  const stats = { invalid: 0, skipped: 0 };
+  const notes: string[] = [];
   await new Promise<void>((resolve, reject) => {
     const child = spawn(
       bin,
@@ -167,7 +196,8 @@ export async function runObjectCapture(opts: {
       const lines = buf.split("\n");
       buf = lines.pop() ?? "";
       for (const line of lines) {
-        const pct = parseProgressLine(line.trim());
+        const trimmed = line.trim();
+        const pct = parseProgressLine(trimmed);
         if (pct !== null) {
           writeProgress(opts.jobId, {
             status: "processing",
@@ -176,6 +206,7 @@ export async function runObjectCapture(opts: {
             pid: process.pid,
           });
         }
+        noteCaptureEvent(trimmed, stats, notes);
       }
     });
     let stderr = "";
@@ -185,7 +216,10 @@ export async function runObjectCapture(opts: {
     child.on("error", reject);
     child.on("close", (code) => {
       if (code === 0) resolve();
-      else reject(new Error(stderr.trim() || MESSAGES.local_capture_failed));
+      else {
+        const raw = [stderr.trim(), ...notes].filter(Boolean).join("\n");
+        reject(new Error(explainCaptureFailure(raw, stats)));
+      }
     });
   });
 }

@@ -1,3 +1,4 @@
+import { ShootingTips } from "@/components/ShootingTips";
 import { UploadDropzone } from "@/components/UploadDropzone";
 import {
   MAX_IMAGES,
@@ -20,6 +21,7 @@ export default function NewJobPage() {
           {MESSAGES.local_banner}
         </p>
       </div>
+      <ShootingTips />
       <UploadDropzone />
     </main>
   );
