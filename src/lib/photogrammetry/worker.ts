@@ -2,6 +2,7 @@ import { execFileSync, spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { getDataDir } from "@/lib/db";
+import { isCancelRequested } from "@/lib/photogrammetry/cancel";
 import { explainCaptureFailure } from "@/lib/photogrammetry/explain";
 import { MESSAGES } from "@/lib/messages";
 import { localGlbPath } from "@/lib/model-store";
@@ -179,6 +180,7 @@ function publishLive(
   live: StageSnapshot,
   extra: { modelPath?: string; pid?: number } = {},
 ): void {
+  if (isCancelRequested(jobId)) return;
   writeProgress(jobId, {
     status,
     progress,
@@ -197,12 +199,26 @@ export async function runObjectCapture(opts: {
   live: StageSnapshot;
 }): Promise<StageSnapshot> {
   const bin = await ensureCliBuilt();
+  if (isCancelRequested(opts.jobId)) {
+    throw new Error(MESSAGES.fail_cancelled);
+  }
   const detail = process.env.PHOTOGRAMMETRY_DETAIL || "medium";
   const stats = { invalid: 0, skipped: 0 };
   const notes: string[] = [];
   let live = opts.live;
   let lastPct = 8;
   await new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const succeed = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+    const fail = (err: Error) => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    };
     const child = spawn(
       bin,
       [
@@ -225,6 +241,11 @@ export async function runObjectCapture(opts: {
       for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed) continue;
+        if (isCancelRequested(opts.jobId)) {
+          child.kill("SIGKILL");
+          fail(new Error(MESSAGES.fail_cancelled));
+          return;
+        }
         const pct = parseProgressLine(trimmed);
         const next = applyCaptureLine(live, trimmed);
         if (pct !== null) lastPct = Math.max(lastPct, pct);
@@ -239,12 +260,16 @@ export async function runObjectCapture(opts: {
     child.stderr.on("data", (c: Buffer) => {
       stderr += c.toString("utf8");
     });
-    child.on("error", reject);
+    child.on("error", (err) => fail(err));
     child.on("close", (code) => {
-      if (code === 0) resolve();
+      if (isCancelRequested(opts.jobId)) {
+        fail(new Error(MESSAGES.fail_cancelled));
+        return;
+      }
+      if (code === 0) succeed();
       else {
         const raw = [stderr.trim(), ...notes].filter(Boolean).join("\n");
-        reject(new Error(explainCaptureFailure(raw, stats)));
+        fail(new Error(explainCaptureFailure(raw, stats)));
       }
     });
   });
@@ -298,6 +323,7 @@ export async function objToGlb(objPath: string, glbPath: string): Promise<void> 
 }
 
 export async function reconstructJob(jobId: string, imagePaths: string[]): Promise<void> {
+  if (isCancelRequested(jobId)) throw new Error(MESSAGES.fail_cancelled);
   let live = beginStage("preparing");
   publishLive(jobId, "processing", 2, live, { pid: process.pid });
   const work = jobWorkDir(jobId);
@@ -307,6 +333,7 @@ export async function reconstructJob(jobId: string, imagePaths: string[]): Promi
   const usdzPath = path.join(work, "model.usdz");
   const objPath = path.join(work, "mesh", "model.obj");
   live = await runObjectCapture({ jobId, imageDir, usdzPath, objPath, live });
+  if (isCancelRequested(jobId)) throw new Error(MESSAGES.fail_cancelled);
   live = moveStage(live, "converting");
   publishLive(jobId, "processing", 92, live, { pid: process.pid });
   if (!fs.existsSync(objPath)) {

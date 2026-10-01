@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { ensureSchema, getDataDir } from "@/lib/db";
 import { ErrorCode, MESSAGES, UserFacingError } from "@/lib/messages";
+import { cancelLocalWork } from "@/lib/photogrammetry/cancel";
 import { ensureLocalGlb } from "@/lib/model-store";
 import { getReconstructionProvider } from "@/lib/providers";
 import type { Job, JobImage, JobStatus } from "@/lib/types";
@@ -346,6 +347,34 @@ export async function createJob(input: CreateJobInput): Promise<Job> {
     providerTaskId,
     ...(simulateFail ? { simulateFail: true } : {}),
   };
+}
+
+/** Stop a queued or processing job. A finished job is left as it is. */
+export async function cancelJob(jobId: string): Promise<Job | null> {
+  const job = await getJob(jobId);
+  if (!job) return null;
+  if (
+    job.status === "ready" ||
+    job.status === "completed" ||
+    job.status === "failed"
+  ) {
+    throw new UserFacingError(
+      ErrorCode.cancel_not_running,
+      MESSAGES.cancel_not_running,
+      409,
+    );
+  }
+  if (job.provider === "local") {
+    cancelLocalWork(job.id);
+  }
+  const next: Job = {
+    ...job,
+    status: "failed",
+    modelUrl: undefined,
+    errorMessage: MESSAGES.fail_cancelled,
+  };
+  await persistJobUpdate(next);
+  return { ...next, updatedAt: new Date().toISOString() };
 }
 
 /** Retry: create a new job by copying images from an existing job. */
