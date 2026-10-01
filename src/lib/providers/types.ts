@@ -1,3 +1,4 @@
+import type { CaptureDetail } from "@/lib/photogrammetry/detail";
 import type { Job, JobStatus } from "@/lib/types";
 
 /** Input for starting a reconstruction task. */
@@ -8,6 +9,8 @@ export type CreateTaskInput = {
   /** Soft-fail hint for dummy provider only. */
   simulateFail?: boolean;
   createdAt: string;
+  /** Mesh detail for local Object Capture. */
+  detail?: CaptureDetail;
 };
 
 export type ProviderTaskStatus =

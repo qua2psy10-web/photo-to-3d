@@ -50,7 +50,8 @@ export async function ensureSchema(): Promise<Client> {
       error_message TEXT,
       simulate_fail INTEGER NOT NULL DEFAULT 0,
       provider TEXT,
-      provider_task_id TEXT
+      provider_task_id TEXT,
+      detail TEXT
     );
 
     CREATE TABLE IF NOT EXISTS job_images (
@@ -67,6 +68,13 @@ export async function ensureSchema(): Promise<Client> {
     CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_job_images_job_id ON job_images(job_id);
   `);
+
+  try {
+    await db.execute("ALTER TABLE jobs ADD COLUMN detail TEXT");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!/duplicate column name/i.test(message)) throw err;
+  }
 
   migrated = true;
   return db;

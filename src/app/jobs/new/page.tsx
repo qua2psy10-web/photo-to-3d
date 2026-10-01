@@ -1,5 +1,6 @@
 import { ShootingTips } from "@/components/ShootingTips";
 import { UploadDropzone } from "@/components/UploadDropzone";
+import { defaultDetail } from "@/lib/photogrammetry/detail";
 import {
   MAX_IMAGES,
   MIN_IMAGES,
@@ -22,7 +23,7 @@ export default function NewJobPage() {
         </p>
       </div>
       <ShootingTips />
-      <UploadDropzone />
+      <UploadDropzone initialDetail={defaultDetail()} />
     </main>
   );
 }

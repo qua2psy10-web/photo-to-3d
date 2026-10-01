@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createJob, listJobs } from "@/lib/jobs-store";
 import { ErrorCode, MESSAGES, UserFacingError } from "@/lib/messages";
+import { parseDetail } from "@/lib/photogrammetry/detail";
 import { toPublicJob } from "@/lib/public-job";
 
 export const runtime = "nodejs";
@@ -69,7 +70,23 @@ export async function POST(request: Request) {
       );
     }
 
-    const job = await createJob({ files });
+    const rawDetail = form.get("detail");
+    const detail =
+      typeof rawDetail === "string" && rawDetail.trim()
+        ? parseDetail(rawDetail)
+        : undefined;
+    if (typeof rawDetail === "string" && rawDetail.trim() && !detail) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: ErrorCode.invalid_detail,
+          message: MESSAGES.invalid_detail,
+        },
+        { status: 400 },
+      );
+    }
+
+    const job = await createJob({ files, detail: detail ?? undefined });
     return NextResponse.json(
       { ok: true, ...toPublicJob(job), id: job.id },
       { status: 201 },

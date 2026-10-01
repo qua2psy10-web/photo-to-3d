@@ -15,5 +15,6 @@ export function toPublicJob(job: Job) {
     ...(job.modelUrl ? { modelUrl: job.modelUrl } : {}),
     ...(job.errorMessage ? { errorMessage: job.errorMessage } : {}),
     ...(job.provider ? { provider: job.provider } : {}),
+    ...(job.detail ? { detail: job.detail } : {}),
   };
 }

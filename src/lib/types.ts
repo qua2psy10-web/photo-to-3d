@@ -33,6 +33,8 @@ export type Job = {
   /** External provider task id when wired (Tripo etc.). */
   providerTaskId?: string;
   provider?: string;
+  /** Object Capture mesh detail chosen for this job. */
+  detail?: "preview" | "reduced" | "medium" | "full" | "raw";
 };
 
 /** Fake timeline (ms since createdAt) for deterministic advance-on-read. */

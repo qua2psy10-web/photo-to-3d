@@ -12,6 +12,10 @@ import {
   isAcceptedImageName,
 } from "@/lib/limits";
 import { MESSAGES } from "@/lib/messages";
+import {
+  DETAIL_OPTIONS,
+  type CaptureDetail,
+} from "@/lib/photogrammetry/detail";
 
 type PreviewItem = {
   id: string;
@@ -23,15 +27,20 @@ const ACCEPT = "image/jpeg,image/png,image/webp,image/*";
 const MIN_CREATE = MIN_IMAGES;
 const RECOMMENDED = RECOMMENDED_IMAGES;
 
+type Props = {
+  initialDetail?: CaptureDetail;
+};
+
 function isAcceptedImage(file: File): boolean {
   if (file.type.startsWith("image/")) return true;
   return isAcceptedImageName(file.name);
 }
 
-export function UploadDropzone() {
+export function UploadDropzone({ initialDetail = "medium" }: Props) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<PreviewItem[]>([]);
+  const [detail, setDetail] = useState<CaptureDetail>(initialDetail);
   const [dragging, setDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,6 +118,7 @@ export function UploadDropzone() {
       for (const item of items) {
         form.append("images", item.file, item.file.name);
       }
+      form.append("detail", detail);
       const res = await fetch("/api/jobs", {
         method: "POST",
         body: form,
@@ -240,6 +250,38 @@ export function UploadDropzone() {
       {error && (
         <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
+
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">画質</legend>
+        <div className="space-y-2" role="radiogroup" aria-label="画質">
+          {DETAIL_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              className={[
+                "flex cursor-pointer gap-3 rounded-lg border px-3 py-2",
+                detail === option.value
+                  ? "border-neutral-900 bg-neutral-50 dark:border-neutral-100 dark:bg-neutral-900"
+                  : "border-neutral-200 dark:border-neutral-700",
+              ].join(" ")}
+            >
+              <input
+                type="radio"
+                name="detail"
+                value={option.value}
+                checked={detail === option.value}
+                onChange={() => setDetail(option.value)}
+                className="mt-1"
+              />
+              <span>
+                <span className="block text-sm font-medium">{option.label}</span>
+                <span className="mt-0.5 block text-xs text-neutral-500">
+                  {option.hint}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       <button
         type="button"

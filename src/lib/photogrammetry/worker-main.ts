@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { MESSAGES } from "@/lib/messages";
 import { isCancelRequested } from "./cancel";
+import { defaultDetail, parseDetail } from "./detail";
 import { reconstructJob } from "./worker";
 import { jobWorkDir, writeProgress } from "./progress";
 
@@ -12,9 +13,12 @@ async function main() {
     process.exit(2);
   }
   const inputFile = path.join(jobWorkDir(jobId), "input.json");
-  const imagePaths = (
-    JSON.parse(fs.readFileSync(inputFile, "utf8")) as { imagePaths: string[] }
-  ).imagePaths;
+  const input = JSON.parse(fs.readFileSync(inputFile, "utf8")) as {
+    imagePaths: string[];
+    detail?: string;
+  };
+  const imagePaths = input.imagePaths;
+  const detail = parseDetail(input.detail) ?? defaultDetail();
   process.once("SIGTERM", () => {
     writeProgress(jobId, {
       status: "failed",
@@ -24,7 +28,7 @@ async function main() {
     process.exit(0);
   });
   try {
-    await reconstructJob(jobId, imagePaths);
+    await reconstructJob(jobId, imagePaths, detail);
   } catch (err) {
     const message = isCancelRequested(jobId)
       ? MESSAGES.fail_cancelled

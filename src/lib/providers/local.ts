@@ -11,6 +11,7 @@ import {
   publicLog,
   STAGE_ACTIVITY,
 } from "@/lib/photogrammetry/stages";
+import { defaultDetail } from "@/lib/photogrammetry/detail";
 import { spawnWorker } from "@/lib/photogrammetry/worker";
 import type { Job } from "@/lib/types";
 import type {
@@ -40,7 +41,8 @@ export const localProvider: ReconstructionProvider = {
   name: "local",
 
   async createTask(input: CreateTaskInput) {
-    const pid = spawnWorker(input.jobId, input.imagePaths);
+    const detail = input.detail ?? defaultDetail();
+    const pid = spawnWorker(input.jobId, input.imagePaths, detail);
     writeProgress(input.jobId, {
       status: "queued",
       progress: 1,
