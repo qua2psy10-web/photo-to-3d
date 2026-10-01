@@ -1,5 +1,7 @@
 import fs from "fs";
 import path from "path";
+import { MESSAGES } from "@/lib/messages";
+import { isCancelRequested } from "./cancel";
 import { reconstructJob } from "./worker";
 import { jobWorkDir, writeProgress } from "./progress";
 
@@ -13,11 +15,22 @@ async function main() {
   const imagePaths = (
     JSON.parse(fs.readFileSync(inputFile, "utf8")) as { imagePaths: string[] }
   ).imagePaths;
+  process.once("SIGTERM", () => {
+    writeProgress(jobId, {
+      status: "failed",
+      progress: 100,
+      errorMessage: MESSAGES.fail_cancelled,
+    });
+    process.exit(0);
+  });
   try {
     await reconstructJob(jobId, imagePaths);
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Photogrammetry failed.";
+    const message = isCancelRequested(jobId)
+      ? MESSAGES.fail_cancelled
+      : err instanceof Error
+        ? err.message
+        : "Photogrammetry failed.";
     writeProgress(jobId, {
       status: "failed",
       progress: 100,

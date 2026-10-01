@@ -33,6 +33,7 @@ export function JobWaiting({ jobId, initialJob }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(!initialJob);
   const [retrying, setRetrying] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const fetchJob = useCallback(async () => {
     try {
@@ -86,6 +87,30 @@ export function JobWaiting({ jobId, initialJob }: Props) {
       if (timer) clearTimeout(timer);
     };
   }, [fetchJob]);
+
+  async function handleCancel() {
+    if (cancelling) return;
+    const ok = window.confirm(
+      "復元を中止しますか？途中まで進んだ計算は破棄されます。",
+    );
+    if (!ok) return;
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/cancel`, { method: "POST" });
+      const data = (await res.json().catch(() => null)) as {
+        message?: string;
+      } | null;
+      if (!res.ok && res.status !== 409) {
+        throw new Error(data?.message || `中止に失敗しました (${res.status})`);
+      }
+      await fetchJob();
+      if (res.status === 409 && data?.message) setError(data.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "中止に失敗しました");
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   async function handleRetry() {
     if (retrying) return;
@@ -146,6 +171,7 @@ export function JobWaiting({ jobId, initialJob }: Props) {
   const isReady = status === "ready" || status === "completed";
   const isFailed = status === "failed";
   const failureReason = job.errorMessage || MESSAGES.dummy_generic_fail;
+  const cancelled = failureReason === MESSAGES.fail_cancelled;
   const isDummy = !job.provider || job.provider === "dummy";
 
   return (
@@ -203,12 +229,12 @@ export function JobWaiting({ jobId, initialJob }: Props) {
       {isFailed && (
         <section className="space-y-3 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40">
           <p className="text-sm font-medium text-red-800 dark:text-red-200">
-            生成に失敗しました
+            {cancelled ? "復元を中止しました" : "生成に失敗しました"}
           </p>
           <p className="whitespace-pre-wrap text-sm text-red-800/90 dark:text-red-200/90">
             {failureReason}
           </p>
-          <ShootingTips title="撮り直すとき" />
+          {!cancelled && <ShootingTips title="撮り直すとき" />}
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -235,11 +261,21 @@ export function JobWaiting({ jobId, initialJob }: Props) {
       )}
 
       {!isReady && !isFailed && (
-        <p className="text-center text-xs text-neutral-400">
-          {job.provider === "local"
-            ? "この Mac で復元中です。数分かかることがあります（約1.5秒ごとに更新）。"
-            : "処理状況を更新しています（約1.5秒ごと）…"}
-        </p>
+        <div className="space-y-3">
+          <button
+            type="button"
+            disabled={cancelling}
+            onClick={handleCancel}
+            className="w-full rounded-lg border border-red-300 px-4 py-2.5 text-sm font-semibold text-red-800 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-200 dark:hover:bg-red-950/40"
+          >
+            {cancelling ? "中止しています…" : "復元を中止"}
+          </button>
+          <p className="text-center text-xs text-neutral-400">
+            {job.provider === "local"
+              ? "この Mac で復元中です。数分かかることがあります（約1.5秒ごとに更新）。"
+              : "処理状況を更新しています（約1.5秒ごと）…"}
+          </p>
+        </div>
       )}
 
       {error && (

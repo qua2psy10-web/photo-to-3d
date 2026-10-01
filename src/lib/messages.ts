@@ -18,6 +18,7 @@ export const ErrorCode = {
   not_found: "not_found",
   retry_failed: "retry_failed",
   retry_no_images: "retry_no_images",
+  cancel_not_running: "cancel_not_running",
   create_failed: "create_failed",
   invalid_password: "invalid_password",
   provider_not_configured: "provider_not_configured",
@@ -46,6 +47,7 @@ export const MESSAGES = {
   retry_failed: "再試行に失敗しました。",
   retry_no_images:
     "保存済みの写真が無いため再試行できません。新規ジョブで写真を上げ直してください。",
+  cancel_not_running: "このジョブはもう実行中ではありません。",
   create_failed: "ジョブの作成に失敗しました。",
   invalid_password: "パスワードが違います。",
   provider_not_configured:
