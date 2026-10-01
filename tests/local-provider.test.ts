@@ -41,12 +41,20 @@ test("local getTask reports processing from progress file", async () => {
     writeProgress("local-job-1", {
       status: "processing",
       progress: 40,
-      stage: "analyzing",
+      stage: "aligning",
+      activity: "写真の位置を合わせています",
+      log: ["写真を解析しています", "写真の位置を合わせています"],
       pid: process.pid,
     });
     const result = await localProvider.getTask(job());
     assert.equal(result.status, "processing");
     assert.equal(result.progress, 40);
+    assert.equal(result.stage, "aligning");
+    assert.equal(result.activity, "写真の位置を合わせています");
+    assert.deepEqual(result.log, [
+      "写真を解析しています",
+      "写真の位置を合わせています",
+    ]);
   });
 });
 

@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  CAPTURE_STEPS,
+  stepIndexForStage,
+} from "@/lib/photogrammetry/stages";
 import type { JobStatus as Status } from "@/lib/types";
 
 type Props = {
@@ -8,31 +12,15 @@ type Props = {
   createdAt?: string;
   /** 0–100 from API; optional display */
   progress?: number;
+  /** Capture phase key from the worker. */
+  stage?: string;
+  /** Current Japanese activity sentence. */
+  activity?: string;
+  /** Recent activity sentences, oldest first. */
+  log?: string[];
   /** Provider-agnostic failure reason */
   errorMessage?: string;
 };
-
-type StepKey = "uploaded" | "analyzing" | "meshing" | "done";
-
-const STEPS: { key: StepKey; label: string }[] = [
-  { key: "uploaded", label: "アップロード済" },
-  { key: "analyzing", label: "解析中" },
-  { key: "meshing", label: "メッシュ生成中" },
-  { key: "done", label: "完了" },
-];
-
-function activeStepIndex(status: Status, progress?: number): number {
-  if (status === "ready" || status === "completed") return 3;
-  if (status === "failed") return -1;
-  if (status === "queued" || status === "pending" || status === "uploading") {
-    return 0;
-  }
-  if (typeof progress === "number") {
-    if (progress < 45) return 1;
-    return 2;
-  }
-  return 1;
-}
 
 const BADGE: Record<Status, { label: string; className: string }> = {
   queued: {
@@ -72,10 +60,20 @@ const BADGE: Record<Status, { label: string; className: string }> = {
   },
 };
 
-export function JobStatus({ status, progress, errorMessage }: Props) {
+export function JobStatus({
+  status,
+  progress,
+  stage,
+  activity,
+  log,
+  errorMessage,
+}: Props) {
   const badge = BADGE[status] ?? BADGE.pending;
-  const current = activeStepIndex(status, progress);
+  const current = stepIndexForStage(stage, status, progress);
   const isFailed = status === "failed";
+  const lines = (log ?? []).filter((line) => line.trim().length > 0);
+  const history =
+    activity && lines[lines.length - 1] === activity ? lines.slice(0, -1) : lines;
   const pct =
     typeof progress === "number"
       ? progress
@@ -111,6 +109,7 @@ export function JobStatus({ status, progress, errorMessage }: Props) {
             aria-valuenow={pct}
             aria-valuemin={0}
             aria-valuemax={100}
+            aria-valuetext={activity || `${pct}%`}
           >
             <div
               className="h-full rounded-full bg-indigo-500 transition-[width] duration-500 ease-out dark:bg-indigo-400"
@@ -120,8 +119,25 @@ export function JobStatus({ status, progress, errorMessage }: Props) {
         </div>
       )}
 
+      {!isFailed && (activity || history.length > 0) && (
+        <div className="space-y-1" aria-live="polite">
+          {history.length > 0 && (
+            <ul className="max-h-28 space-y-0.5 overflow-y-auto text-xs text-neutral-500">
+              {history.map((line, i) => (
+                <li key={`${i}-${line}`}>{line}</li>
+              ))}
+            </ul>
+          )}
+          {activity && (
+            <p className="text-sm font-medium text-neutral-900 dark:text-neutral-50">
+              {activity}
+            </p>
+          )}
+        </div>
+      )}
+
       <ol className="space-y-0">
-        {STEPS.map((step, i) => {
+        {CAPTURE_STEPS.map((step, i) => {
           const done = !isFailed && current > i;
           const active = !isFailed && current === i;
           const muted = isFailed || current < i;
@@ -143,7 +159,7 @@ export function JobStatus({ status, progress, errorMessage }: Props) {
                 >
                   {done ? "✓" : i + 1}
                 </span>
-                {i < STEPS.length - 1 && (
+                {i < CAPTURE_STEPS.length - 1 && (
                   <span
                     className={[
                       "my-0.5 w-0.5 flex-1 min-h-4",

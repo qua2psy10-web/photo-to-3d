@@ -20,6 +20,12 @@ export type GetTaskResult = {
   status: ProviderTaskStatus;
   /** 0–100 */
   progress: number;
+  /** Capture phase key. See `CaptureStage`. */
+  stage?: string;
+  /** Current Japanese activity sentence. */
+  activity?: string;
+  /** Recent Japanese activity sentences. */
+  log?: string[];
   /** Set when ready — for dummy this is `/samples/demo.glb`. */
   modelUrl?: string;
   /** Human-readable failure reason (provider-agnostic copy OK). */

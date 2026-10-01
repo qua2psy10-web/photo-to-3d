@@ -6,6 +6,13 @@ import { explainCaptureFailure } from "@/lib/photogrammetry/explain";
 import { MESSAGES } from "@/lib/messages";
 import { localGlbPath } from "@/lib/model-store";
 import { jobWorkDir, writeProgress } from "@/lib/photogrammetry/progress";
+import {
+  applyCaptureLine,
+  beginStage,
+  moveStage,
+  type StageSnapshot,
+} from "@/lib/photogrammetry/stages";
+import type { ProviderTaskStatus } from "@/lib/providers/types";
 
 export function cliPackageDir(): string {
   return path.join(process.cwd(), "tools", "object-capture");
@@ -165,16 +172,36 @@ function parseProgressLine(line: string): number | null {
   return null;
 }
 
+function publishLive(
+  jobId: string,
+  status: ProviderTaskStatus,
+  progress: number,
+  live: StageSnapshot,
+  extra: { modelPath?: string; pid?: number } = {},
+): void {
+  writeProgress(jobId, {
+    status,
+    progress,
+    stage: live.stage,
+    activity: live.activity,
+    log: live.log,
+    ...extra,
+  });
+}
+
 export async function runObjectCapture(opts: {
   jobId: string;
   imageDir: string;
   usdzPath: string;
   objPath: string;
-}): Promise<void> {
+  live: StageSnapshot;
+}): Promise<StageSnapshot> {
   const bin = await ensureCliBuilt();
   const detail = process.env.PHOTOGRAMMETRY_DETAIL || "medium";
   const stats = { invalid: 0, skipped: 0 };
   const notes: string[] = [];
+  let live = opts.live;
+  let lastPct = 8;
   await new Promise<void>((resolve, reject) => {
     const child = spawn(
       bin,
@@ -197,14 +224,13 @@ export async function runObjectCapture(opts: {
       buf = lines.pop() ?? "";
       for (const line of lines) {
         const trimmed = line.trim();
+        if (!trimmed) continue;
         const pct = parseProgressLine(trimmed);
-        if (pct !== null) {
-          writeProgress(opts.jobId, {
-            status: "processing",
-            progress: Math.max(8, pct),
-            stage: pct < 45 ? "analyzing" : "meshing",
-            pid: process.pid,
-          });
+        const next = applyCaptureLine(live, trimmed);
+        if (pct !== null) lastPct = Math.max(lastPct, pct);
+        if (pct !== null || next !== live) {
+          live = next;
+          publishLive(opts.jobId, "processing", lastPct, live, { pid: process.pid });
         }
         noteCaptureEvent(trimmed, stats, notes);
       }
@@ -222,6 +248,7 @@ export async function runObjectCapture(opts: {
       }
     });
   });
+  return live;
 }
 
 export function rewriteMtlTextureRefs(mtl: string): string {
@@ -271,29 +298,17 @@ export async function objToGlb(objPath: string, glbPath: string): Promise<void> 
 }
 
 export async function reconstructJob(jobId: string, imagePaths: string[]): Promise<void> {
-  writeProgress(jobId, {
-    status: "processing",
-    progress: 2,
-    stage: "preparing",
-    pid: process.pid,
-  });
+  let live = beginStage("preparing");
+  publishLive(jobId, "processing", 2, live, { pid: process.pid });
   const work = jobWorkDir(jobId);
   const imageDir = await stageImages(jobId, imagePaths);
-  writeProgress(jobId, {
-    status: "processing",
-    progress: 6,
-    stage: "analyzing",
-    pid: process.pid,
-  });
+  live = moveStage(live, "analyzing");
+  publishLive(jobId, "processing", 6, live, { pid: process.pid });
   const usdzPath = path.join(work, "model.usdz");
   const objPath = path.join(work, "mesh", "model.obj");
-  await runObjectCapture({ jobId, imageDir, usdzPath, objPath });
-  writeProgress(jobId, {
-    status: "processing",
-    progress: 92,
-    stage: "converting",
-    pid: process.pid,
-  });
+  live = await runObjectCapture({ jobId, imageDir, usdzPath, objPath, live });
+  live = moveStage(live, "converting");
+  publishLive(jobId, "processing", 92, live, { pid: process.pid });
   if (!fs.existsSync(objPath)) {
     throw new Error(MESSAGES.local_convert_failed);
   }
@@ -303,12 +318,8 @@ export async function reconstructJob(jobId: string, imagePaths: string[]): Promi
   if (!fs.existsSync(glb) || fs.statSync(glb).size < 100) {
     throw new Error(MESSAGES.local_convert_failed);
   }
-  writeProgress(jobId, {
-    status: "ready",
-    progress: 100,
-    stage: "done",
-    modelPath: glb,
-  });
+  live = moveStage(live, "done");
+  publishLive(jobId, "ready", 100, live, { modelPath: glb });
 }
 
 export function spawnWorker(jobId: string, imagePaths: string[]): number {

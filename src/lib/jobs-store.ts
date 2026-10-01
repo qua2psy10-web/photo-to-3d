@@ -371,10 +371,27 @@ export async function retryJob(sourceJobId: string): Promise<Job | null> {
   return createJob({ files, simulateFail: false });
 }
 
-export async function jobProgressPercent(job: Job): Promise<number> {
+export type JobProgressView = {
+  progress: number;
+  stage?: string;
+  activity?: string;
+  log?: string[];
+};
+
+export async function jobProgressView(job: Job): Promise<JobProgressView> {
   const provider = getReconstructionProvider();
   const result = await provider.getTask(job);
-  return result.progress;
+  return {
+    progress: result.progress,
+    ...(result.stage ? { stage: result.stage } : {}),
+    ...(result.activity ? { activity: result.activity } : {}),
+    ...(result.log && result.log.length > 0 ? { log: result.log } : {}),
+  };
+}
+
+export async function jobProgressPercent(job: Job): Promise<number> {
+  const view = await jobProgressView(job);
+  return view.progress;
 }
 
 export async function getJobImages(jobId: string): Promise<JobImage[]> {

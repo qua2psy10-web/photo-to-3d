@@ -45,7 +45,7 @@ APP_SECRET=... pnpm start
 - `data/photo-to-3d.db`
 - `data/uploads/<jobId>/`
 - `data/models/<jobId>.glb`
-- `data/work/<jobId>/` — 進捗と中間 USDZ/OBJ
+- `data/work/<jobId>/` — 進捗（段階・経過文）と中間 USDZ/OBJ
 
 ## 開発
 
