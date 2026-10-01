@@ -12,6 +12,9 @@ import type { Job, JobStatus as Status } from "@/lib/types";
 type JobPayload = Job & {
   ok?: boolean;
   progress?: number;
+  stage?: string;
+  activity?: string;
+  log?: string[];
   error?: string;
   errorMessage?: string;
   thumbnailUrl?: string;
@@ -151,6 +154,9 @@ export function JobWaiting({ jobId, initialJob }: Props) {
         status={status}
         createdAt={job.createdAt}
         progress={job.progress}
+        stage={job.stage}
+        activity={job.activity}
+        log={job.log}
         errorMessage={isFailed ? failureReason : undefined}
       />
 

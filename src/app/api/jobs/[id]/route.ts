@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getJob, jobProgressPercent } from "@/lib/jobs-store";
+import { getJob, jobProgressView } from "@/lib/jobs-store";
 import { ErrorCode, MESSAGES } from "@/lib/messages";
 import { toPublicJob } from "@/lib/public-job";
 
@@ -20,13 +20,16 @@ export async function GET(_request: Request, context: RouteContext) {
     );
   }
 
-  const progress = await jobProgressPercent(job);
+  const live = await jobProgressView(job);
 
   return NextResponse.json(
     {
       ok: true,
       ...toPublicJob(job),
-      progress,
+      progress: live.progress,
+      ...(live.stage ? { stage: live.stage } : {}),
+      ...(live.activity ? { activity: live.activity } : {}),
+      ...(live.log ? { log: live.log } : {}),
     },
     { status: 200 },
   );

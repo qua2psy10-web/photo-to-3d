@@ -7,6 +7,10 @@ export type ProgressFile = {
   status: ProviderTaskStatus;
   progress: number;
   stage?: string;
+  /** Current Japanese sentence for the waiting screen. */
+  activity?: string;
+  /** Recent Japanese sentences, oldest first. */
+  log?: string[];
   errorMessage?: string;
   pid?: number;
   modelPath?: string;

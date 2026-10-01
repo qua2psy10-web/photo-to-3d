@@ -4,7 +4,13 @@ import {
   isPidAlive,
   readProgress,
   writeProgress,
+  type ProgressFile,
 } from "@/lib/photogrammetry/progress";
+import {
+  isCaptureStage,
+  publicLog,
+  STAGE_ACTIVITY,
+} from "@/lib/photogrammetry/stages";
 import { spawnWorker } from "@/lib/photogrammetry/worker";
 import type { Job } from "@/lib/types";
 import type {
@@ -13,6 +19,22 @@ import type {
   ReconstructionProvider,
 } from "./types";
 import fs from "fs";
+
+function liveFromProgress(p: ProgressFile) {
+  const stage = isCaptureStage(p.stage) ? p.stage : undefined;
+  const activity =
+    typeof p.activity === "string" && p.activity.trim()
+      ? p.activity
+      : stage
+        ? STAGE_ACTIVITY[stage]
+        : undefined;
+  const log = publicLog(p.log);
+  return {
+    ...(stage ? { stage } : {}),
+    ...(activity ? { activity } : {}),
+    ...(log ? { log } : {}),
+  };
+}
 
 export const localProvider: ReconstructionProvider = {
   name: "local",
@@ -23,6 +45,8 @@ export const localProvider: ReconstructionProvider = {
       status: "queued",
       progress: 1,
       stage: "queued",
+      activity: STAGE_ACTIVITY.queued,
+      log: [STAGE_ACTIVITY.queued],
       pid,
     });
     return { providerTaskId: pid ? `local-${pid}` : `local-${input.jobId}` };
@@ -74,7 +98,7 @@ export const localProvider: ReconstructionProvider = {
       };
     }
 
-    if (!isPidAlive(p.pid) && p.status !== "ready") {
+    if (!isPidAlive(p.pid)) {
       return {
         status: "failed",
         progress: 100,
@@ -86,6 +110,7 @@ export const localProvider: ReconstructionProvider = {
     return {
       status: p.status,
       progress: p.progress,
+      ...liveFromProgress(p),
       providerTaskId: job.providerTaskId,
     };
   },
