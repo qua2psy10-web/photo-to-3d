@@ -35,7 +35,7 @@ APP_SECRET=... pnpm start
 | --- | --- |
 | `APP_SECRET` | ログイン用共有シークレット |
 | `RECONSTRUCTION_PROVIDER` | `local`（既定）/ `dummy`（立方体デモ）/ `tripo`（未配線） |
-| `PHOTOGRAMMETRY_DETAIL` | `preview` / `reduced` / `medium`（既定）/ `full` / `raw` |
+| `PHOTOGRAMMETRY_DETAIL` | 新規ジョブ画面の初期値。`preview` / `reduced` / `medium`（既定）/ `full` / `raw`。画面で選んだ値が優先 |
 | `PHOTO_TO_3D_DATA_DIR` | SQLite・写真・GLB の保存先。既定 `./data` |
 
 ## データ

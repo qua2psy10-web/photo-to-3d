@@ -3,6 +3,10 @@ import fs from "fs";
 import path from "path";
 import { getDataDir } from "@/lib/db";
 import { isCancelRequested } from "@/lib/photogrammetry/cancel";
+import {
+  defaultDetail,
+  type CaptureDetail,
+} from "@/lib/photogrammetry/detail";
 import { explainCaptureFailure } from "@/lib/photogrammetry/explain";
 import { MESSAGES } from "@/lib/messages";
 import { localGlbPath } from "@/lib/model-store";
@@ -197,12 +201,13 @@ export async function runObjectCapture(opts: {
   usdzPath: string;
   objPath: string;
   live: StageSnapshot;
+  detail?: CaptureDetail;
 }): Promise<StageSnapshot> {
   const bin = await ensureCliBuilt();
   if (isCancelRequested(opts.jobId)) {
     throw new Error(MESSAGES.fail_cancelled);
   }
-  const detail = process.env.PHOTOGRAMMETRY_DETAIL || "medium";
+  const detail = opts.detail ?? defaultDetail();
   const stats = { invalid: 0, skipped: 0 };
   const notes: string[] = [];
   let live = opts.live;
@@ -322,7 +327,11 @@ export async function objToGlb(objPath: string, glbPath: string): Promise<void> 
   });
 }
 
-export async function reconstructJob(jobId: string, imagePaths: string[]): Promise<void> {
+export async function reconstructJob(
+  jobId: string,
+  imagePaths: string[],
+  detail: CaptureDetail = defaultDetail(),
+): Promise<void> {
   if (isCancelRequested(jobId)) throw new Error(MESSAGES.fail_cancelled);
   let live = beginStage("preparing");
   publishLive(jobId, "processing", 2, live, { pid: process.pid });
@@ -332,7 +341,14 @@ export async function reconstructJob(jobId: string, imagePaths: string[]): Promi
   publishLive(jobId, "processing", 6, live, { pid: process.pid });
   const usdzPath = path.join(work, "model.usdz");
   const objPath = path.join(work, "mesh", "model.obj");
-  live = await runObjectCapture({ jobId, imageDir, usdzPath, objPath, live });
+  live = await runObjectCapture({
+    jobId,
+    imageDir,
+    usdzPath,
+    objPath,
+    live,
+    detail,
+  });
   if (isCancelRequested(jobId)) throw new Error(MESSAGES.fail_cancelled);
   live = moveStage(live, "converting");
   publishLive(jobId, "processing", 92, live, { pid: process.pid });
@@ -349,10 +365,28 @@ export async function reconstructJob(jobId: string, imagePaths: string[]): Promi
   publishLive(jobId, "ready", 100, live, { modelPath: glb });
 }
 
-export function spawnWorker(jobId: string, imagePaths: string[]): number {
+export function writeWorkerInput(
+  jobId: string,
+  imagePaths: string[],
+  detail: CaptureDetail,
+): string {
   const work = jobWorkDir(jobId);
   const inputFile = path.join(work, "input.json");
-  fs.writeFileSync(inputFile, JSON.stringify({ jobId, imagePaths }), "utf8");
+  fs.writeFileSync(
+    inputFile,
+    JSON.stringify({ jobId, imagePaths, detail }),
+    "utf8",
+  );
+  return inputFile;
+}
+
+export function spawnWorker(
+  jobId: string,
+  imagePaths: string[],
+  detail: CaptureDetail = defaultDetail(),
+): number {
+  const work = jobWorkDir(jobId);
+  writeWorkerInput(jobId, imagePaths, detail);
   const workerFile = path.join(
     process.cwd(),
     "src",

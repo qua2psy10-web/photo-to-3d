@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { listJobs } from "@/lib/jobs-store";
+import { detailLabel } from "@/lib/photogrammetry/detail";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -72,6 +73,11 @@ export default async function JobsHistoryPage() {
                     <span className="text-xs text-neutral-500 tabular-nums">
                       {job.imageCount} 枚
                     </span>
+                    {detailLabel(job.detail) && (
+                      <span className="text-xs text-neutral-500">
+                        画質 {detailLabel(job.detail)}
+                      </span>
+                    )}
                   </div>
                   <p className="truncate font-mono text-xs text-neutral-500">
                     {job.id}

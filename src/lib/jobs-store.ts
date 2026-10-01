@@ -4,6 +4,11 @@ import path from "path";
 import { ensureSchema, getDataDir } from "@/lib/db";
 import { ErrorCode, MESSAGES, UserFacingError } from "@/lib/messages";
 import { cancelLocalWork } from "@/lib/photogrammetry/cancel";
+import {
+  defaultDetail,
+  parseDetail,
+  type CaptureDetail,
+} from "@/lib/photogrammetry/detail";
 import { ensureLocalGlb } from "@/lib/model-store";
 import { getReconstructionProvider } from "@/lib/providers";
 import type { Job, JobImage, JobStatus } from "@/lib/types";
@@ -21,6 +26,7 @@ type JobRow = {
   simulate_fail: number;
   provider: string | null;
   provider_task_id: string | null;
+  detail: string | null;
 };
 
 type ImageRow = {
@@ -34,6 +40,7 @@ type ImageRow = {
 };
 
 function rowToJob(row: JobRow, images: ImageRow[]): Job {
+  const detail = parseDetail(row.detail);
   return {
     id: row.id,
     status: row.status as JobStatus,
@@ -48,6 +55,7 @@ function rowToJob(row: JobRow, images: ImageRow[]): Job {
     ...(row.simulate_fail ? { simulateFail: true } : {}),
     ...(row.provider ? { provider: row.provider } : {}),
     ...(row.provider_task_id ? { providerTaskId: row.provider_task_id } : {}),
+    ...(detail ? { detail } : {}),
   };
 }
 
@@ -191,6 +199,7 @@ export type CreateJobInput = {
     mimeType: string;
   }[];
   simulateFail?: boolean;
+  detail?: CaptureDetail;
 };
 
 function extensionFor(name: string, mime: string): string {
@@ -261,6 +270,7 @@ export async function createJob(input: CreateJobInput): Promise<Job> {
   }
 
   const imagePaths = imageRows.map((r) => r.path);
+  const detail = input.detail ?? defaultDetail();
 
   async function insertImages() {
     for (const img of imageRows) {
@@ -287,14 +297,15 @@ export async function createJob(input: CreateJobInput): Promise<Job> {
       imagePaths: imagePaths.map((p) => path.join(getDataDir(), p)),
       simulateFail,
       createdAt,
+      detail,
     });
     providerTaskId = created.providerTaskId;
   } catch (err) {
     const message =
       err instanceof Error ? err.message : MESSAGES.provider_not_configured;
     await db.execute({
-      sql: `INSERT INTO jobs (id, status, created_at, updated_at, image_count, model_url, error_message, simulate_fail, provider, provider_task_id)
-            VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL)`,
+      sql: `INSERT INTO jobs (id, status, created_at, updated_at, image_count, model_url, error_message, simulate_fail, provider, provider_task_id, detail)
+            VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, ?)`,
       args: [
         id,
         "failed",
@@ -304,6 +315,7 @@ export async function createJob(input: CreateJobInput): Promise<Job> {
         message,
         simulateFail ? 1 : 0,
         provider.name,
+        detail,
       ],
     });
     await insertImages();
@@ -316,13 +328,14 @@ export async function createJob(input: CreateJobInput): Promise<Job> {
       imagePaths,
       errorMessage: message,
       provider: provider.name,
+      detail,
       ...(simulateFail ? { simulateFail: true } : {}),
     };
   }
 
   await db.execute({
-    sql: `INSERT INTO jobs (id, status, created_at, updated_at, image_count, model_url, error_message, simulate_fail, provider, provider_task_id)
-          VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?)`,
+    sql: `INSERT INTO jobs (id, status, created_at, updated_at, image_count, model_url, error_message, simulate_fail, provider, provider_task_id, detail)
+          VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)`,
     args: [
       id,
       "queued",
@@ -332,6 +345,7 @@ export async function createJob(input: CreateJobInput): Promise<Job> {
       simulateFail ? 1 : 0,
       provider.name,
       providerTaskId ?? null,
+      detail,
     ],
   });
   await insertImages();
@@ -345,6 +359,7 @@ export async function createJob(input: CreateJobInput): Promise<Job> {
     imagePaths,
     provider: provider.name,
     providerTaskId,
+    detail,
     ...(simulateFail ? { simulateFail: true } : {}),
   };
 }
@@ -397,7 +412,11 @@ export async function retryJob(sourceJobId: string): Promise<Job | null> {
       MESSAGES.retry_no_images,
     );
   }
-  return createJob({ files, simulateFail: false });
+  return createJob({
+    files,
+    simulateFail: false,
+    detail: source.detail,
+  });
 }
 
 export type JobProgressView = {

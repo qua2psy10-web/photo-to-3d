@@ -7,6 +7,7 @@ import { JobStatus } from "@/components/JobStatus";
 import { ShootingTips } from "@/components/ShootingTips";
 import { ModelViewer } from "@/components/ModelViewer";
 import { MESSAGES } from "@/lib/messages";
+import { detailLabel } from "@/lib/photogrammetry/detail";
 import type { Job, JobStatus as Status } from "@/lib/types";
 
 type JobPayload = Job & {
@@ -189,6 +190,12 @@ export function JobWaiting({ jobId, initialJob }: Props) {
       <dl className="grid grid-cols-2 gap-2 text-sm">
         <dt className="text-neutral-500">画像枚数</dt>
         <dd className="tabular-nums">{job.imageCount}</dd>
+        {detailLabel(job.detail) && (
+          <>
+            <dt className="text-neutral-500">画質</dt>
+            <dd>{detailLabel(job.detail)}</dd>
+          </>
+        )}
         <dt className="text-neutral-500">作成日時</dt>
         <dd className="font-mono text-xs break-all">{job.createdAt}</dd>
         {job.provider && (
